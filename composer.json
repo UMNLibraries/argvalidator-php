@@ -1,0 +1,29 @@
+{
+  "name": "umnlib/argvalidator",
+  "description": "Validate PHP function arguments/parameters.",
+  "keywords": [],
+  "authors": [
+    {
+      "name": "David Naughton",
+      "email": "naughton@umn.edu"
+    }
+  ],
+
+  "require": {
+  },
+
+  "repositories": [
+  ],   
+
+  "require-dev": {
+    "phpunit/phpunit": ">=3.7"
+  },
+
+  "autoload": {
+    "psr-4": {"UmnLib\\Core\\": "src/"}
+  },
+
+  "autoload-dev": {
+    "psr-4": {"UmnLib\\Core\\Tests\\": "tests/"}
+  }
+}
