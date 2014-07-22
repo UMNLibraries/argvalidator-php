@@ -128,7 +128,7 @@ class ArgValidatorTest extends \PHPUnit_Framework_TestCase
 
   public function testInstanceof()
   {
-    $class = '\\UmnLib\\Core\\Tests\\Foo';
+    $class = '\UmnLib\Core\Tests\ArgValidatorFoo';
     $foo = new $class();
 
     $validationSpecs = 
@@ -149,51 +149,82 @@ class ArgValidatorTest extends \PHPUnit_Framework_TestCase
   {
     ArgValidator::validate(
       array('foo' => 'manchu', 'bar' => 'baz'),
-      array('foo' => array('instanceof' => '\\UmnLib\\Core\\Tests\\Foo'), 'bar' => array('is' => 'string'))
+      array('foo' => array('instanceof' => '\UmnLib\Core\Tests\ArgValidatorFoo'), 'bar' => array('is' => 'string'))
     );        
   }
 
   public function testDefault()
   {
     $validatedArgs = ArgValidator::validate(
-      array('foo' => 1,),
-      array('foo' => array('is' => 'int'), 'bar' => array('is' => 'string', 'default' => 'baz'))
+      array('foo' => 1),
+      array(
+        'foo' => array('is' => 'int', 'default' => 23),
+        'bar' => array('is' => 'string', 'default' => 'baz'),
+      )
     );        
     $this->assertEquals(array('foo' => 1, 'bar' => 'baz'), $validatedArgs);
   }
 
-  public function testDefaultFunction()
+  public function testBuilder()
   {
-    $class = '\\UmnLib\\Core\\Tests\\Foo';
+    $class = '\UmnLib\Core\Tests\ArgValidatorFoo';
+    $object = new \stdClass();
+    $fooSpec = array('is' => 'object', 'builder' => function () use($class) { return new $class(); });
+    $giantString = 'fee fye foe fum';
+    $giantArray = explode(' ', $giantString);
+
     $validatedArgs = ArgValidator::validate(
-      array('bar' => 'baz'),
+      array('object' => $object, 'bar' => 'baz'),
       array(
-        'foo' => array('instanceof' => $class, 'default_function' => function () { return new \UmnLib\Core\Tests\Foo(); }),
-        'bar' => array('is' => 'string', 'default' => 'baz'),
+        // No foo in the args, so ArgValidator should use the builder to define it:
+        'foo' => $fooSpec,
+
+        // If the param is defined with a value in the args, ArgValidator should ignore the builder:
+        'object' => $fooSpec,
+        'bar' => array('is' => 'string', 'builder' => function () { return 'none'; }),
+
+        // Various ways of defining the builder. If the builder is a scalar, it must be callable.
+        // If the builder is an array, either the entire array must be callable, or the first element
+        // must be callable. In the latter case, ArgValidator will pass any remaining elements in the 
+        // builder array as parameters to the callable.
+        'giant' => array('is' => 'array', 'builder' => array('explode', ' ', $giantString)),
+        'nowScalar' => array('is' => 'string', 'builder' => $class . '::now'),
+        'nowArray' => array('is' => 'string', 'builder' => array($class, 'now')),
+
+        // Equivalent to: 'builder' => array($class . '::join', 'fee', 'fye', 'foe', 'fum')
+        'joinScalar' => array('is' => 'string', 'builder' => array_merge(array($class . '::join'), $giantArray)),
+
+        // Equivalent to: 'builder' => array(array(new $class(), 'join'), 'fee', 'fye', 'foe', 'fum')
+        'joinArray' => array('is' => 'string', 'builder' => array_merge(array(array(new $class(), 'join')), $giantArray)),
       )
     ); 
+
+    $nowExpected = $class::now();
+    $joinExpected = 'fee fye foe fum';
+
+    $this->assertTrue(is_object($validatedArgs['object']));
+    $this->assertTrue($validatedArgs['object'] instanceof \stdClass);
+    $this->assertTrue(is_object($validatedArgs['foo']));
     $this->assertTrue($validatedArgs['foo'] instanceof $class);
+    $this->assertEquals('baz', $validatedArgs['bar']);
+    $this->assertEquals($giantArray, $validatedArgs['giant']);
+    $this->assertEquals($nowExpected, $validatedArgs['nowScalar']);
+    $this->assertEquals($nowExpected, $validatedArgs['nowArray']);
+    $this->assertEquals($joinExpected, $validatedArgs['joinScalar']);
+    $this->assertEquals($joinExpected, $validatedArgs['joinArray']);
   }
-
-  function testDefaultUserFunction()
-  {
-    $class = 'Foo';
-    $validatedArgs = ArgValidator::validate(
-      array(),
-      array(
-        'date' => array('is' => 'string', 'default_user_function' => array('\\UmnLib\\Core\\Tests\\Foo','now')),
-      )
-    ); 
-    $this->assertEquals(date('Ymd'), $validatedArgs['date']);
-  }
-
 }
 
-class Foo
+class ArgValidatorFoo
 {
   public function now()
   {
     return date('Ymd');
+  }
+
+  public function join()
+  {
+    return implode(' ', func_get_args());
   }
 }
 

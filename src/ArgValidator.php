@@ -34,7 +34,8 @@ class ArgValidator
       $value = $args[$param];
 
       foreach ($spec as $key => $constraint) {
-        if (in_array($key, array('required','default','default_function','default_user_function'))) {
+        // These were already handled above:
+        if (in_array($key, array('required','default','builder'))) {
           continue;
         }
         $method = 'validate' . ucfirst($key);
@@ -52,8 +53,7 @@ class ArgValidator
 
   static function validateRequired($args, $param, $spec)
   {
-    // TODO: Add support for default values and optional params.
-    // Maybe also for (non-)slurpy lists in validatePos()?
+    // TODO: Maybe support (non-)slurpy lists in validatePos()?
     if (array_key_exists($param, $args)) {
       return $args;
     }
@@ -64,15 +64,26 @@ class ArgValidator
       $args[$param] = $spec['default'];
       return $args;
     }
-    if (array_key_exists('default_function', $spec)) {
-      $function = $spec['default_function'];
-      $args[$param] = $function();
-      return $args;
-    }
-    if (array_key_exists('default_user_function', $spec)) {
-      // TODO: Validation of default_user_function array passed in by user?
-      // Or maybe just a try-catch with an enhanced error message?
-      $args[$param] = call_user_func( $spec['default_user_function'] );
+    if (array_key_exists('builder', $spec)) {
+      $builder = $spec['builder'];
+      unset($callable);
+      $callableParams = array();
+      if (is_callable($builder)) {
+        $callable = $builder;
+      } elseif (is_array($builder)) {
+        // If the entire value of builder is NOT callable, it MUST be
+        // an array in which the first element is callable:
+        $maybeCallable = array_shift($builder);
+        if (is_callable($maybeCallable)) {
+          $callable = $maybeCallable;
+          // Anything left in the $builder array we assume to be params:
+          $callableParams = $builder;
+        }
+      } 
+      if (!isset($callable)) {
+        throw new \InvalidArgumentException("No callable found in 'builder' spec for parameter '$param'");
+      }
+      $args[$param] = call_user_func_array($callable, $callableParams);
       return $args;
     }
     throw new \InvalidArgumentException("Missing argument for required parameter '$param'");
@@ -86,7 +97,7 @@ class ArgValidator
       $callerFrameIndex = 0;
       for ($i = 0; $i < sizeof($backtrace); $i++) {
         $frame = $backtrace[$i];
-        if ($frame['class'] == 'ArgValidator' && $frame['function'] == 'validate') {
+        if ($frame['class'] == '\\UmnLib\\Core\\ArgValidator' && $frame['function'] == 'validate') {
           $callerFrameIndex = $i + 1;
           break;
         }
