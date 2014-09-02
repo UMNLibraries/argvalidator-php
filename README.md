@@ -13,7 +13,7 @@ Install via [Composer](http://getcomposer.org). In your project's `composer.json
   "repositories": [
     {
       "type": "vcs",
-      "url": "git@github.umn.edu:Libraries/argvalidator-php.git"
+      "url": "git@github.com:UMNLibraries/argvalidator-php.git"
     }
   ]
 ```
@@ -21,3 +21,7 @@ Install via [Composer](http://getcomposer.org). In your project's `composer.json
 ## Older Versions
 
 For older versions of this package that did not use Composer, see the `0.x.y` releases.
+
+## Attribution
+
+The University of Minnesota Libraries created this software for the [EthicShare](http://www.ethicshare.org/about) project.
