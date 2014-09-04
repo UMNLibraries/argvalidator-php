@@ -8,7 +8,7 @@ Install via [Composer](http://getcomposer.org). In your project's `composer.json
 
 ```json
   "require": {
-    "umnlib/argvalidator": ">=1.0.0"
+    "umnlib/argvalidator": "1.0.*"
   },
   "repositories": [
     {
